@@ -64,6 +64,9 @@ public class RedisState<T> implements IBackingMap<T> {
 		public String password = null;
 		public int database = Protocol.DEFAULT_DATABASE;
 		public String hkey = null;
+    // this option allows periodical multiPuts based on current timestamp
+    // 0 means no periodical multiPuts
+    public int modSecs = 0;
 	}
 	
 	public static interface KeyFactory extends Serializable {
@@ -236,9 +239,14 @@ public class RedisState<T> implements IBackingMap<T> {
 	}
 
 	public void multiPut(List<List<Object>> keys, List<T> vals) {
-		if (keys.size() > 0) {
+    long tsNow = 0L;
+    long modSecs = 60L;
+    if ( this.options.modSecs > 0 ) {
+      tsNow = System.currentTimeMillis() / 1000;
+      modSecs = this.options.modSecs;
+    }
+		if (keys.size() > 0 && tsNow % modSecs == 0) {
 			Jedis jedis = pool.getResource();
-
 			/*
 			 * mset 
 			 */
@@ -270,9 +278,12 @@ public class RedisState<T> implements IBackingMap<T> {
 				}
 				
 				pl.exec();
-				//pl.sync();
+				pl.sync();
 				logger.info(String.format("flush to redis: %s", this.options.hkey));
 			}
 		}
+    else {
+      logger.info(String.format("Redis: skipping %d keys", keys.size()));
+    }
 	}
 }
