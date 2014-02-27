@@ -270,7 +270,7 @@ public class RedisState<T> implements IBackingMap<T> {
 				}
 				
 				pl.exec();
-				pl.sync();
+				//pl.sync();
 				logger.info(String.format("flush to redis: %s", this.options.hkey));
 			}
 		}
